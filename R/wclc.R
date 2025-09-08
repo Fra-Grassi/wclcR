@@ -8,10 +8,13 @@
 #' @param win_size Integer > 0. Window length in samples.
 #' @param win_inc  Integer > 0. Window increment (hop) in samples.
 #' @param max_lag  Integer >= 0. Maximum absolute lag in samples.
+#' @param output One of c("r", "z", "both"). If "z" or "both", Fisher z-transform is applied via atanh() to (optionally clamped) r.
+#' @param z_eps Small epsilon to use to clamp e to (-1+z_eps, 1-z_eps) before atanh to avoid infinite values. Default to 1e-12; set to NA to disable clamping.
 #'
 #' @return An object of class \code{"wclc"}: a list with
 #' \itemize{
-#'   \item \code{R}     — matrix with dimensions (num_windows x (2*max_lag+1)) of Pearson \eqn{r}
+#'   \item \code{R}     — matrix with dimensions (num_windows x (2*max_lag+1)) of Pearson \eqn{r} (present if output %in% c("r", "both"))
+#'   \item \code{Z}     — matrix with dimensions (num_windows x (2*max_lag+1)) of Fisher z = atanh(\eqn{r}) (present if output %in% c("z", "both"))
 #'   \item \code{lags}  — integer vector of lags (-max_lag … +max_lag)
 #'   \item \code{starts} — 1-based window start indices in the original series
 #' }
@@ -22,9 +25,10 @@
 #' N <- 1000
 #' x <- sin(2*pi*2*(0:(N-1))/100) + rnorm(N, 0, 0.05)
 #' y <- c(rep(NA_real_, 5), x[1:(N-5)]) + rnorm(N, 0, 0.05)
-#' res <- wclc(x, y, win_size = 200, win_inc = 50, max_lag = 20)
+#' res <- wclc(x, y, win_size = 200, win_inc = 50, max_lag = 20, output = "both", z_eps = 1e-12)
 #' @export
-wclc <- function(x, y, win_size, win_inc, max_lag) {
+wclc <- function(x, y, win_size, win_inc, max_lag, output = c("r", "z", "both"), z_eps = 1e-12)  {
+  output <- match.arg(output)
   if (!is.numeric(x) || !is.numeric(y)) {
     stop("x and y must be numeric vectors.", call. = FALSE)
   }
@@ -90,5 +94,21 @@ wclc <- function(x, y, win_size, win_inc, max_lag) {
     R[, i] <- col_cor_na(Wx, Wy)
   }
 
-  structure(list(R = R, lags = lags, starts = starts), class = "wclc")
+  # Define return list based on output selection
+  out <- list(lags = lags, starts = starts)
+  if (output %in% c("r", "both")) {  # add computed correlations
+    out$R <- R
+  }
+  if (output %in% c("z", "both")) {  # add z-transformed correlations
+    if (is.na(z_eps)) {
+      Z <- atanh(R)  # no clamping, may yield ±Inf if |r|==1
+    } else {
+      Z <- atanh(pmax(pmin(R, 1 - z_eps), - 1 + z_eps))  # clamping
+    }
+    out$Z <- Z
+  }
+
+  class(out) <- "wclc"
+
+  return(out)
 }
