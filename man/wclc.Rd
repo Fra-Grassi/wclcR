@@ -11,7 +11,8 @@ wclc(
   win_inc,
   max_lag,
   output = c("r", "z", "both"),
-  z_eps = 1e-12
+  z_eps = 1e-12,
+  edges = c("strict", "ragged")
 )
 }
 \arguments{
@@ -23,12 +24,18 @@ wclc(
 
 \item{max_lag}{Integer >= 0. Maximum absolute lag in samples.}
 
-\item{output}{One of c("r", "z", "both"). If "z" or "both", Fisher z-transform is applied via atanh() to (optionally clamped) r.}
+\item{output}{One of c("r", "z", "both"). If "z" (default) or "both", Fisher z-transform is applied via atanh() to (optionally clamped) r.}
 
 \item{z_eps}{Small epsilon to use to clamp e to (-1+z_eps, 1-z_eps) before atanh to avoid infinite values. Default to 1e-12; set to NA to disable clamping.}
+
+\item{edges}{One of c("strict", "ragged").
+\itemize{
+\item "strict": default. Only compute correlations for windows for which all lags are within signal bounds -> no NAs, but the very first and last window of the two signals are never compared.
+\item "ragged": starts span full series -> all windows are compared but NAs are introduced when lag goes outside signal bounds.
+}}
 }
 \value{
-An object of class \code{"wclc"}: a list with
+A S3 object of class \code{"wclc"}: a list with
 \itemize{
 \item \code{R}     — matrix with dimensions (num_windows x (2\emph{max_lag+1)) of Pearson \eqn{r} (present if output \%in\% c("r", "both"))
 \item \code{Z}     — matrix with dimensions (num_windows x (2}max_lag+1)) of Fisher z = atanh(\eqn{r}) (present if output \%in\% c("z", "both"))
@@ -46,7 +53,7 @@ shift \code{x}). Within each window, lags are scanned in 1-sample steps.
 N <- 1000
 x <- sin(2*pi*2*(0:(N-1))/100) + rnorm(N, 0, 0.05)
 y <- c(rep(NA_real_, 5), x[1:(N-5)]) + rnorm(N, 0, 0.05)
-res <- wclc(x, y, win_size = 200, win_inc = 50, max_lag = 20, output = "both", z_eps = 1e-12)
+res <- wclc(x, y, win_size = 200, win_inc = 50, max_lag = 20, output = "both", z_eps = 1e-12, edges = "strict")
 }
 \references{
 Boker, S. M., Rotondo, J. L., Xu, M., & King, K. (2002). Windowed cross-correlation and peak picking for the analysis of variability in the association between behavioral time series. Psychological Methods, 7(3), 338–355. https://doi.org/10.1037/1082-989X.7.3.338

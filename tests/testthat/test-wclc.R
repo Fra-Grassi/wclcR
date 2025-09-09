@@ -143,3 +143,25 @@ test_that("input validation errors are informative", {
   expect_error(wclc(x, y, 60, 10, 30, output = "r"), "too short", fixed = FALSE)
   expect_error(wclc(x, y, 20, 10, 5, output = "nonsense"), "should be one of", fixed = FALSE)
 })
+
+test_that("edges='ragged' yields NAs at edges but full start coverage", {
+  set.seed(1)
+  x <- rnorm(100); y <- x + rnorm(100, 0.2)
+  win_size <- 20; win_inc <- 5; max_lag <- 10
+
+  a <- wclc(x, y, win_size, win_inc, max_lag, edges = "strict")
+  b <- wclc(x, y, win_size, win_inc, max_lag, edges = "ragged")
+
+  # starts
+  expect_equal(min(b$starts), 1L)
+  expect_equal(max(b$starts), 100 - win_size + 1L)
+  expect_true(min(a$starts) > min(b$starts))
+  expect_true(max(a$starts) < max(b$starts))
+
+  # NA strip at edges for +/- max_lag
+  col_pos <- which(b$lags ==  max_lag)
+  col_neg <- which(b$lags == -max_lag)
+  # earliest starts invalid for negative lag; latest starts invalid for positive lag
+  expect_true(any(is.na(b$R[1:3,  col_neg])))
+  expect_true(any(is.na(b$R[(nrow(b$R)-2):nrow(b$R), col_pos])))
+})
