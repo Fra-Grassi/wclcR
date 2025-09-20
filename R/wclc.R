@@ -129,9 +129,8 @@ wclc <- function(
           R[valid, i] <- col_cor_na(Wx, Wy)
         }
       } else {
-        # For L < 0 (shift X forward by -L), both bounds matter:
-        # lower: s >= 1 - L ; upper: s <= N - win_size + 1 + L
-        valid <- (starts >= (1L - L)) & (starts <= (N - win_size + 1L + L))
+        # For L < 0 (shift X forward by -L), upper bound: s <= N - win_size + 1 + L
+        valid <- starts <= (N - win_size + 1L + L)
         if (any(valid)) {
           idxv <- idx_mat[, valid, drop = FALSE]
           Wx <- matrix(x[idxv - L], nrow = win_size)  # -L is positive

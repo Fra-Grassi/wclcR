@@ -144,24 +144,40 @@ test_that("input validation errors are informative", {
   expect_error(wclc(x, y, 20, 10, 5, output = "nonsense"), "should be one of", fixed = FALSE)
 })
 
-test_that("edges='ragged' yields NAs at edges but full start coverage", {
+test_that("edges='ragged' yields NA tails per-lag (no padding, full starts)", {
   set.seed(1)
-  x <- rnorm(100); y <- x + rnorm(100, 0.2)
-  win_size <- 20; win_inc <- 5; max_lag <- 10
+  N <- 100; win_size <- 20; win_inc <- 5; max_lag <- 10
+  x <- rnorm(N); y <- x + rnorm(N, 0.2)
 
-  a <- wclc(x, y, win_size, win_inc, max_lag, edges = "strict")
-  b <- wclc(x, y, win_size, win_inc, max_lag, edges = "ragged")
+  b <- wclc(x, y, win_size, win_inc, max_lag, edges = "ragged", output = "r")
 
-  # starts
+  # 1) Full start coverage: from 1 to N - win_size + 1
   expect_equal(min(b$starts), 1L)
-  expect_equal(max(b$starts), 100 - win_size + 1L)
-  expect_true(min(a$starts) > min(b$starts))
-  expect_true(max(a$starts) < max(b$starts))
+  expect_equal(max(b$starts), N - win_size + 1L)
 
-  # NA strip at edges for +/- max_lag
-  col_pos <- which(b$lags ==  max_lag)
-  col_neg <- which(b$lags == -max_lag)
-  # earliest starts invalid for negative lag; latest starts invalid for positive lag
-  expect_true(any(is.na(b$R[1:3,  col_neg])))
-  expect_true(any(is.na(b$R[(nrow(b$R)-2):nrow(b$R), col_pos])))
+  # Helper to compute expected number of invalid (NA) starts for a lag
+  expected_na_count <- function(L) {
+    bound <- if (L >= 0L) (N - win_size + 1L - L) else (N - win_size + 1L + L)
+    sum(b$starts > bound)
+  }
+
+  # Column indices
+  col0  <- which(b$lags == 0)
+  colP  <- which(b$lags ==  max_lag)
+  colN  <- which(b$lags == -max_lag)
+
+  # 2) Lag 0: no NAs anywhere
+  expect_false(any(is.na(b$R[, col0])))
+
+  # 3) Positive max lag: only late starts should be NA; count must match formula
+  na_pos <- is.na(b$R[, colP])
+  expect_false(any(na_pos[1:3]))  # no early NAs
+  expect_true(any(na_pos))        # there are some at the tail
+  expect_equal(sum(na_pos), expected_na_count(+max_lag))
+
+  # 4) Negative max lag: only late starts should be NA; count matches
+  na_neg <- is.na(b$R[, colN])
+  expect_false(any(na_neg[1:3]))  # no early NAs
+  expect_true(any(na_neg))        # tail NAs exist
+  expect_equal(sum(na_neg), expected_na_count(-max_lag))
 })
