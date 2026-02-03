@@ -1,0 +1,28 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: wclcR
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Francesco
+    family-names: Grassi
+    email: francescograssi3@gmail.com
+    affiliation: 'University of Goettingen, Goettingen, Germany'
+    orcid: 'https://orcid.org/0000-0003-2630-3790'
+repository-code: 'https://github.com/Fra-Grassi/wclcR.git'
+abstract: >-
+  wclcR provides tools for computing windowed cross-lagged
+  correlations (Boker et al., 2002) in R.
+
+  It implements a fast, NA-safe split-lag algorithm and will
+  grow to include peak extraction, plotting, and EEG/EMG
+  use-cases.
+keywords:
+  - windowed cross-lagged correlation
+  - R
+  - statistics
+license: MIT
